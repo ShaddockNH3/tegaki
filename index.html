@@ -118,9 +118,10 @@
   .foot .sp{flex:1}
   .foot .sep{opacity:.5}
 
-  /* ---------- 半屏窗口 ---------- */
-  @media (max-width:1000px){
+  /* ---------- 平板横屏 / 半屏窗口：仍双栏，内容收紧 ---------- */
+  @media (max-width:1024px){
     .grid{grid-template-columns:minmax(0,1fr) 300px;gap:16px;padding:2px 20px 0;max-width:none}
+    .canvas-wrap{flex:1;aspect-ratio:auto;min-height:0}
     .bar{padding:16px 20px 10px}
     .board{padding:14px;justify-content:center}
     .board-foot{padding:12px 2px 2px;flex-direction:column;align-items:stretch;gap:10px}
@@ -135,11 +136,28 @@
     .foot{padding:12px 20px 16px}
   }
 
-  /* ---------- 手机竖屏 ---------- */
-  @media (max-width:620px){
+  /* ---------- 窄屏 / 平板竖屏（768 分界）：单列，右栏两张卡并排 ---------- */
+  @media (max-width:768px){
     .app{height:auto;min-height:100%;overflow:visible}
+    .bar{padding:16px 20px 10px}
+    .grid{display:flex;flex-direction:column;gap:14px;padding:0 20px;max-width:none;flex:0 0 auto}
+    .board{width:100%;padding:16px}
+    .canvas-wrap{flex:none;aspect-ratio:1/1}
+    .board-foot{padding:14px 2px 2px;flex-direction:row;align-items:center;gap:12px}
+    .hint{font-size:12px}
+    .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;width:100%}
+    .result{padding:18px;gap:14px}
+    .big{font-size:76px;letter-spacing:-3px}
+    .probs{padding:16px 18px 18px}
+    .row{grid-template-columns:16px minmax(0,1fr) 40px;gap:8px}
+    .track{height:8px}
+    .foot{padding:12px 20px 16px}
+  }
+
+  /* ---------- 手机竖屏（480 分界） ---------- */
+  @media (max-width:480px){
     .bar{padding:14px 16px 10px}
-    .mark{width:32px;height:32px;border-radius:10px;font-size:14px}
+    .mark{width:32px;height:32px;border-radius:10px}
     .name{font-size:16px}
     .name .jp{font-size:10.5px;margin-left:5px}
     .sub{font-size:11px}
@@ -147,14 +165,14 @@
     .bar-r .ghost{display:none}
     .sub-extra{display:none}
     .foot .mid{display:none}
-    .foot{white-space:nowrap}
-    .grid{display:flex;flex-direction:column;gap:12px;padding:0 16px;max-width:none;flex:0 0 auto}
-    .board{padding:12px;width:100%}
-    .board-foot{padding:10px 2px 0;gap:8px;flex-direction:row;align-items:center}
+    .foot{white-space:nowrap;padding:10px 16px 14px;font-size:10.5px;gap:6px}
+    .grid{gap:12px;padding:0 16px}
+    .board{padding:12px}
+    .board-foot{padding:10px 2px 0;gap:8px}
     .hint{font-size:11px}
     .btn{height:34px;padding:0 12px;font-size:12.5px;border-radius:10px}
     .pad-hint{font-size:13px}
-    .side{gap:12px;width:100%}
+    .side{display:flex;flex-direction:column;gap:12px}
     .result{padding:12px 14px;gap:12px}
     .big{font-size:56px;letter-spacing:-2px}
     .r-k{font-size:11px}
@@ -169,7 +187,11 @@
     .row{grid-template-columns:14px minmax(0,1fr) 36px;gap:8px}
     .d,.p{font-size:10.5px}
     .track{height:6px}
-    .foot{padding:10px 16px 14px;font-size:10.5px;gap:6px}
+  }
+
+  /* 矮窗口（横向拉长但高度不够）：画布让位，别顶出页头页脚 */
+  @media (min-width:769px) and (max-height:600px){
+    .canvas-wrap{flex:1;aspect-ratio:auto;min-height:0}
   }
 
   @media (prefers-reduced-motion:reduce){
