@@ -27,8 +27,9 @@
        padding:20px 28px 14px;flex:none}
   .brand{display:flex;align-items:center;gap:12px;min-width:0}
   .mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;
-        background:linear-gradient(145deg,#2563eb,#1e40af);color:#fff;font-size:16px;font-weight:700;
+        background:linear-gradient(145deg,#2563eb,#1e40af);color:#fff;
         box-shadow:0 8px 18px -8px rgba(29,78,216,.7)}
+  .mark svg{display:block;width:76%;height:76%}
   .name{font-size:19px;font-weight:700;letter-spacing:-.2px;line-height:1.1}
   .sub{font-size:12px;color:var(--muted);margin-top:3px}
   .bar-r{display:flex;align-items:center;gap:10px;flex:none}
@@ -172,7 +173,10 @@
 <div class="app">
   <header class="bar">
     <div class="brand">
-      <div class="mark" aria-hidden="true">手</div>
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="8"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M18 17h29L29 47"/></svg>
+      </div>
       <div>
         <div class="name">tegaki</div>
         <div class="sub">手写数字识别<span class="sub-extra"> · 全在浏览器里跑</span></div>
