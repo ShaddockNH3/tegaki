@@ -1,61 +1,231 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ShaddockNH3的手写数字识别</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            text-align: center;
-            margin-top: 30px;
-            background-color: #f0f0f0;
-            /* 禁止手机双击缩放 */
-            touch-action: manipulation;
-        }
-        h1 {
-            color: #333;
-            font-size: 1.5em;
-        }
-        #canvas-container {
-            display: inline-block;
-            border: 3px solid #333;
-            /* 让边框紧贴canvas */
-            line-height: 0;
-        }
-        #canvas {
-            cursor: crosshair;
-        }
-        #result {
-            font-size: 2.5em;
-            margin-top: 20px;
-            color: #ff69b4;
-            font-weight: bold;
-            min-height: 1.2em; /* 防止文字跳动 */
-        }
-        button {
-            font-size: 1.2em;
-            padding: 10px 20px;
-            margin-top: 20px;
-            cursor: pointer;
-            border-radius: 8px;
-            border: none;
-            background-color: #4CAF50;
-            color: white;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>tegaki · 手写数字识别</title>
+<meta name="description" content="在浏览器里手写一个数字，模型立刻告诉你它是几，以及它有多确定。纯前端推理，画面不出浏览器。">
+<meta name="theme-color" content="#f4f6fa">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --bg:#f4f6fa; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e4eaf2;
+    --blue:#1d4ed8; --blue-l:#2563eb; --track:#eef2f8; --grid:#dce4ef;
+    --shadow:0 1px 2px rgba(15,23,42,.05), 0 18px 34px -26px rgba(15,23,42,.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  .app{min-height:100%;height:100%;display:flex;flex-direction:column;overflow:hidden}
+
+  /* ---------- 顶栏 ---------- */
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+       padding:20px 28px 14px;flex:none}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;
+        background:linear-gradient(145deg,#2563eb,#1e40af);color:#fff;font-size:16px;font-weight:700;
+        box-shadow:0 8px 18px -8px rgba(29,78,216,.7)}
+  .name{font-size:19px;font-weight:700;letter-spacing:-.2px;line-height:1.1}
+  .sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .bar-r{display:flex;align-items:center;gap:10px;flex:none}
+  .pill{height:30px;padding:0 12px;border-radius:999px;font-size:12.5px;display:inline-flex;align-items:center;
+        gap:7px;white-space:nowrap;border:0;font-family:inherit;text-decoration:none}
+  .pill.ok{background:#e9f6ee;color:#14663f}
+  .pill.ok::before{content:"";width:6px;height:6px;border-radius:50%;background:#22a06b;
+                   box-shadow:0 0 0 3px rgba(34,160,107,.16)}
+  .pill.loading{background:#eef2fb;color:#3b5b96}
+  .pill.loading::before{content:"";width:6px;height:6px;border-radius:50%;background:#5b82c9;
+                        animation:blink 1s ease-in-out infinite}
+  .pill.error{background:#fdecec;color:#a83232;cursor:pointer}
+  .pill.error::before{content:"";width:6px;height:6px;border-radius:50%;background:#d24b4b}
+  @keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+  .ghost{background:#fff;color:#334155;box-shadow:inset 0 0 0 1px #e2e8f0;cursor:pointer}
+  .ghost:hover{color:var(--blue);box-shadow:inset 0 0 0 1px #cdd9ee}
+
+  /* ---------- 主区 ---------- */
+  .grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);
+        gap:26px;width:100%;max-width:1120px;margin:0 auto;padding:4px 28px 0;align-items:stretch}
+  .card{background:var(--card);border-radius:20px;box-shadow:var(--shadow)}
+
+  /* 画板 */
+  .board{padding:18px;display:flex;flex-direction:column;min-height:0;justify-content:center}
+  .canvas-wrap{position:relative;aspect-ratio:1/1;border-radius:14px;overflow:hidden;flex:none;
+    background:radial-gradient(circle at 1px 1px,var(--grid) 1px,transparent 0) 12px 12px/26px 26px,#fcfdff;
+    box-shadow:inset 0 0 0 1px #e8eef6}
+  #pad{position:absolute;inset:0;width:100%;height:100%;display:block;
+       touch-action:none;cursor:crosshair;border-radius:inherit}
+  .pad-hint{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
+    font-size:15px;color:#a9b6c9;letter-spacing:.5px;transition:opacity .18s}
+  .pad-hint[hidden]{opacity:0}
+  .board-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 4px 4px}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.5;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .btns{display:flex;gap:8px;flex:none}
+  .btn{height:38px;padding:0 16px;border-radius:11px;font-size:13.5px;font-weight:600;border:0;
+       cursor:pointer;font-family:inherit;transition:transform .12s,box-shadow .12s,background .12s}
+  .btn.primary{background:var(--blue);color:#fff;box-shadow:0 8px 18px -10px rgba(29,78,216,.9)}
+  .btn.primary:hover{background:#1b45c2}
+  .btn.ghost{background:#fff;color:#334155;box-shadow:inset 0 0 0 1px #e2e8f0}
+  .btn.ghost:hover{color:var(--blue);box-shadow:inset 0 0 0 1px #cdd9ee}
+  .btn:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+  .btn:active:not(:disabled){transform:translateY(1px)}
+
+  /* 右栏 */
+  .side{display:flex;flex-direction:column;gap:16px;min-height:0}
+  .result{padding:22px 24px;display:flex;align-items:center;gap:20px;flex:none}
+  .big{font-size:104px;line-height:.82;font-weight:800;color:var(--blue);letter-spacing:-4px;
+       font-variant-numeric:tabular-nums;min-width:1.05em;text-align:center;transition:color .15s}
+  .big.dim{color:#d7dfec}
+  .r-meta{flex:1;min-width:0}
+  .r-k{font-size:12px;color:var(--muted);letter-spacing:.4px}
+  .r-conf{font-size:15px;font-weight:600;margin-top:6px;color:#334155}
+  .r-conf b{font-size:20px;color:var(--blue);font-variant-numeric:tabular-nums}
+  .top3{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+  .chip{height:26px;padding:0 10px;border-radius:8px;font-size:12.5px;display:inline-flex;align-items:center;
+        gap:5px;background:#f1f5fb;color:#475569;font-variant-numeric:tabular-nums}
+  .chip.hot{background:#e8effe;color:var(--blue);font-weight:700;box-shadow:inset 0 0 0 1px #cfdcfb}
+  .chip i{font-style:normal;opacity:.62;font-size:11.5px}
+
+  /* 概率 */
+  .probs{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1;min-height:0}
+  .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex:none}
+  .ph b{font-size:13.5px}
+  .ph span{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .rows{display:flex;flex-direction:column;gap:7px;flex:1;justify-content:space-between;min-height:0}
+  .row{display:grid;grid-template-columns:18px minmax(0,1fr) 44px;align-items:center;gap:10px}
+  .d{font-size:12.5px;color:#64748b;text-align:center;font-variant-numeric:tabular-nums}
+  .track{height:9px;border-radius:99px;background:var(--track);overflow:hidden}
+  .track i{display:block;height:100%;width:0;border-radius:99px;background:#c9d6ea;
+           transition:width .22s cubic-bezier(.2,.7,.3,1),background .15s}
+  .p{font-size:11.5px;color:#94a3b8;text-align:right;font-variant-numeric:tabular-nums}
+  .row.hot .d{color:var(--blue);font-weight:700}
+  .row.hot .track i{background:linear-gradient(90deg,#3b82f6,#1d4ed8)}
+  .row.hot .p{color:var(--blue);font-weight:700}
+
+  /* 底栏 */
+  .foot{display:flex;align-items:center;gap:8px;padding:16px 30px 20px;font-size:11.5px;color:#94a3b8;flex:none}
+  .foot .sp{flex:1}
+  .foot .sep{opacity:.5}
+
+  /* ---------- 半屏窗口 ---------- */
+  @media (max-width:1000px){
+    .grid{grid-template-columns:minmax(0,1fr) 300px;gap:16px;padding:2px 20px 0;max-width:none}
+    .bar{padding:16px 20px 10px}
+    .board{padding:14px;justify-content:center}
+    .board-foot{padding:12px 2px 2px;flex-direction:column;align-items:stretch;gap:10px}
+    .btns{justify-content:flex-end}
+    .hint{font-size:11.5px}
+    .result{padding:16px 18px;gap:14px}
+    .big{font-size:72px;letter-spacing:-3px}
+    .probs{padding:14px 16px 16px}
+    .row{grid-template-columns:16px minmax(0,1fr) 38px;gap:8px}
+    .track{height:7px}
+    .rows{gap:5px}
+    .foot{padding:12px 20px 16px}
+  }
+
+  /* ---------- 手机竖屏 ---------- */
+  @media (max-width:620px){
+    .app{height:auto;min-height:100%;overflow:visible}
+    .bar{padding:14px 16px 10px}
+    .mark{width:32px;height:32px;border-radius:10px;font-size:14px}
+    .name{font-size:16px}
+    .sub{font-size:11px}
+    .pill{height:26px;padding:0 9px;font-size:11px}
+    .bar-r .ghost{display:none}
+    .sub-extra{display:none}
+    .foot .mid{display:none}
+    .foot{white-space:nowrap}
+    .grid{display:flex;flex-direction:column;gap:12px;padding:0 16px;max-width:none;flex:0 0 auto}
+    .board{padding:12px;width:100%}
+    .board-foot{padding:10px 2px 0;gap:8px;flex-direction:row;align-items:center}
+    .hint{font-size:11px}
+    .btn{height:34px;padding:0 12px;font-size:12.5px;border-radius:10px}
+    .pad-hint{font-size:13px}
+    .side{gap:12px;width:100%}
+    .result{padding:12px 14px;gap:12px}
+    .big{font-size:56px;letter-spacing:-2px}
+    .r-k{font-size:11px}
+    .r-conf{font-size:12px;margin-top:3px}
+    .r-conf b{font-size:16px}
+    .top3{margin-top:8px;gap:5px}
+    .chip{height:22px;padding:0 8px;font-size:11px;border-radius:7px}
+    .probs{padding:12px 14px 14px;flex:none}
+    .ph{margin-bottom:9px}
+    .ph b{font-size:12px}
+    .rows{gap:4px;flex:none}
+    .row{grid-template-columns:14px minmax(0,1fr) 36px;gap:8px}
+    .d,.p{font-size:10.5px}
+    .track{height:6px}
+    .foot{padding:10px 16px 14px;font-size:10.5px;gap:6px}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
 </head>
 <body>
-    <h1>✍️ 请在网格中写一个数字 ✍️</h1>
-    <div id="canvas-container">
-        <canvas id="canvas" width="280" height="280"></canvas>
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">手</div>
+      <div>
+        <div class="name">tegaki</div>
+        <div class="sub">手写数字识别<span class="sub-extra"> · 全在浏览器里跑</span></div>
+      </div>
     </div>
-    <div>
-        <button id="clearBtn">清除画板</button>
+    <div class="bar-r">
+      <button class="pill loading" id="status" type="button">模型加载中</button>
+      <a class="pill ghost" href="https://github.com/ShaddockNH3/tegaki" target="_blank" rel="noopener">GitHub</a>
     </div>
-    <div id="result">AI正在思考中...</div>
+  </header>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="script.js"></script>
+  <main class="grid">
+    <section class="card board">
+      <div class="canvas-wrap">
+        <canvas id="pad" aria-label="手写画板，用鼠标或手指写一个数字"></canvas>
+        <div class="pad-hint" id="padHint">在框里写一个数字</div>
+      </div>
+      <div class="board-foot">
+        <p class="hint">写哪儿都行，会自动裁到笔画再缩放</p>
+        <div class="btns">
+          <button class="btn ghost" id="undo" type="button" disabled>撤销</button>
+          <button class="btn primary" id="clear" type="button" disabled>清空</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="side">
+      <section class="card result">
+        <div class="big dim" id="digit" aria-live="polite">–</div>
+        <div class="r-meta">
+          <p class="r-k">我猜是</p>
+          <p class="r-conf" id="conf">写一个数字试试</p>
+          <div class="top3" id="top3"></div>
+        </div>
+      </section>
+
+      <section class="card probs">
+        <div class="ph"><b>十档概率</b><span>0 – 9</span></div>
+        <div class="rows" id="rows"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <span>纯前端推理 · 画面不出浏览器</span><span class="sep mid">·</span>
+    <span class="mid">模型 148 KB</span><span class="sep mid">·</span>
+    <span class="mid">MIT</span>
+    <span class="sp"></span>
+    <span>tfjs 4.22</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
